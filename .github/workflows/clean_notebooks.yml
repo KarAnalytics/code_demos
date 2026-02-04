@@ -1,0 +1,42 @@
+name: Clean Notebook Metadata
+
+on:
+  push:
+    paths:
+      - '**.ipynb'
+
+jobs:
+  clean-notebooks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python_version: '3.10'
+
+      - name: Install nbformat
+        run: pip install nbformat
+
+      - name: Clean Widget Metadata
+        run: |
+          python -c "
+          import nbformat
+          import glob
+          for nb_path in glob.glob('**/*.ipynb', recursive=True):
+              with open(nb_path, 'r', encoding='utf-8') as f:
+                  nb = nbformat.read(f, as_version=4)
+              if 'widgets' in nb.metadata:
+                  del nb.metadata['widgets']
+                  with open(nb_path, 'w', encoding='utf-8') as f:
+                      nbformat.write(nb, f)
+          "
+
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automated cleanup of notebook widget metadata"
